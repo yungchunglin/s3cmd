@@ -23,6 +23,7 @@ import locale
 import subprocess
 import htmlentitydefs
 import socket
+import time
 
 from copy import copy
 from optparse import OptionParser, Option, OptionValueError, IndentedHelpFormatter
@@ -638,6 +639,7 @@ def cmd_sync_remote2remote(args):
     file_list.sort()
     for file in file_list:
         seq += 1
+        time.sleep(cfg.sync_interval)
         item = src_list[file]
         src_uri = S3Uri(item['object_uri_str'])
         dst_uri = S3Uri(item['target_uri'])
@@ -723,6 +725,7 @@ def cmd_sync_remote2local(args):
     file_list.sort()
     for file in file_list:
         seq += 1
+        time.sleep(cfg.sync_interval)
         item = remote_list[file]
         uri = S3Uri(item['object_uri_str'])
         dst_file = item['local_filename']
@@ -909,6 +912,7 @@ def cmd_sync_local2remote(args):
     file_list.sort()
     for file in file_list:
         seq += 1
+        time.sleep(cfg.sync_interval)
         item = local_list[file]
         src = item['full_name']
         uri = S3Uri(item['remote_uri'])
@@ -1548,6 +1552,7 @@ def main():
     optparser.add_option("-d", "--debug", dest="verbosity", action="store_const", const=logging.DEBUG, help="Enable debug output.")
     optparser.add_option(      "--version", dest="show_version", action="store_true", help="Show s3cmd version (%s) and exit." % (PkgInfo.version))
     optparser.add_option("-F", "--follow-symlinks", dest="follow_symlinks", action="store_true", default=False, help="Follow symbolic links as if they are regular files")
+    optparser.add_option(      "--sync-interval", dest="sync_interval", action="store", default=0, help="Set the time between sync'ing any two files to lower traffic per unit time")
 
     optparser.set_usage(optparser.usage + " COMMAND [parameters]")
     optparser.set_description('S3cmd is a tool for managing objects in '+
@@ -1677,6 +1682,11 @@ def main():
     ## Set output and filesystem encoding for printing out filenames.
     sys.stdout = codecs.getwriter(cfg.encoding)(sys.stdout, "replace")
     sys.stderr = codecs.getwriter(cfg.encoding)(sys.stderr, "replace")
+
+    ## Set sync interval
+    if options.sync_interval > 0:
+        output(u"Sync interval is set to %s seconds" % options.sync_interval)
+        cfg.update_option("sync_interval", options.sync_interval)
 
     ## Process --exclude and --exclude-from
     patterns_list, patterns_textual = process_patterns(options.exclude, options.exclude_from, is_glob = True, option_txt = "exclude")
